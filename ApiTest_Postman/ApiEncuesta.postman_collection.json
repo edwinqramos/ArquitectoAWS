@@ -1,0 +1,231 @@
+{
+	"info": {
+		"_postman_id": "b9c62161-60cf-42d5-a442-f3886eb84298",
+		"name": "ApiEncuesta",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/status/verificar",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/status/verificar",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"status",
+						"verificar"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/api/v1/security/login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "e6cfb539-4c9c-4ff1-979c-2f71e879c1fd",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);\r",
+							"postman.setEnvironmentVariable(\"accessToken\", jsonData.accessToken);\r",
+							"postman.setEnvironmentVariable(\"sessionId\", jsonData.sessionId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"alumno\",\r\n    \"password\": \"123456\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/api/v1/security/login",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"security",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/api/v1/security/first-reset-password",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\": \"alumno\",\r\n    \"password\": \"123456\",\r\n    \"session\": \"{{sessionId}}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/api/v1/security/first-reset-password",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"security",
+						"first-reset-password"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/api/v1/security/refresh-token",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"token\": \"{{accessToken}}\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/api/v1/security/refresh-token",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"security",
+						"refresh-token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/api/v1/encuestas/",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": " Bearer {{accessToken}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"Karina\",\r\n    \"lastName\": \"Siaden\",\r\n    \"age\": 36,\r\n    \"language\": \"Java\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/api/v1/encuestas/",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"encuestas",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/api/v1/encuestas",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": " Bearer {{accessToken}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url_api_encuesta}}/api/v1/encuestas",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"encuestas"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/v2/api-docs",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url_api_encuesta}}/v2/api-docs",
+					"host": [
+						"{{url_api_encuesta}}"
+					],
+					"path": [
+						"v2",
+						"api-docs"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

@@ -1,0 +1,46 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Bastion",
+    "Metadata": {},
+    "Parameters": {
+        "TipoInstancia" : {
+            "Type" : "String",
+            "Default" : "t2.micro"
+        },
+        "IdImagen" : {
+            "Type" : "String",
+            "Default" : "ami-0080e4c5bc078760e"
+        },
+        "ClaveSSH" : {
+            "Type" : "AWS::EC2::KeyPair::KeyName"
+        }
+    },
+    "Mappings": {},
+    "Conditions": {},
+    "Resources": {
+        "ec2Bastion" : {
+            "Type" : "AWS::EC2::Instance",
+            "Properties" : {
+                "ImageId" : { "Ref" : "IdImagen" },
+                "KeyName" : { "Ref" : "ClaveSSH" },
+                "InstanceType": { "Ref" : "TipoInstancia" },
+                "SubnetId": {"Fn::ImportValue": "vpc-subnetpublic-2"},
+                "SecurityGroupIds": [ {
+                    "Fn::ImportValue": "firewall-bastion"
+                }]
+               
+            }
+        }
+    },
+    "Outputs": {
+        "dnsPublicEC2": {
+            "Description": "DNS publico para EC2",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ec2Bastion",
+                    "PublicDnsName"
+                ]
+            }
+        }
+    }
+}

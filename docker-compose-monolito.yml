@@ -1,0 +1,48 @@
+version: '3.4'
+
+services:
+
+  mysql_server:
+    build: ./database/
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345678
+      - MYSQL_DATABASE=encuestabd
+      - MYSQL_USER=usr_app
+      - MYSQL_PASSWORD=pwdUsrApp
+      - MYSQL_ROOT_HOST=%
+    volumes: 
+      - my-data-mysql:/var/lib/mysql/
+    restart: on-failure
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - backend
+
+  apiencuesta:
+    build: ./BackEnd/service-encuesta/
+    environment: 
+      - host=mysql_server
+      - port=3306
+      - database=encuestabd
+      - username=usr_app
+      - password=pwdUsrApp
+      - awsCognitoPoolId=us-east-1_RS1UPfitM
+      - awsCognitoClientId=7jgae8od6snn1lijrvgl7fnrhh
+      - awsCognitoRegion=us-east-1
+      - AWS_ACCESS_KEY_ID=AKIAYM5W4Q55SDVK45CD
+      - AWS_SECRET_ACCESS_KEY=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
+    depends_on:
+      - mysql_server
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    #Sobreescribiendo el entrypoint del dockerfile
+    entrypoint: dockerize -wait tcp://mysql_server:3306 -timeout 10m java -jar /app.jar
+    networks:
+      - backend
+
+volumes:
+  my-data-mysql:
+
+networks:
+  backend: 
+  frontend: 

@@ -1,0 +1,31 @@
+
+CONEXION SSH
+ssh -i aws-us-east-1-trabajo-final.pem ec2-user@3.235.0.130
+
+WINDOWS:
+$path = ".\aws-us-east-1-trabajo-final.pem"
+# Reset to remove explicit permissions
+icacls.exe $path /reset
+# Give current user explicit read-permission
+icacls.exe $path /GRANT:R "$($env:USERNAME):(R)"
+# Disable inheritance and remove inherited permissions
+icacls.exe $path /inheritance:r
+
+SUBIR ARCHIVO LLAVE A LINUX SSH
+scp -i llave archivo usuario@ip:ruta
+scp -i curso-us-east-1.pem curso-us-east-1.pem ec2-user@34.235.133.207:/home/ec2-user
+chmod 0444 curso-us-east-1.pem
+**conexion ip privada
+ssh -i curso-us-east-1.pem ec2-user@10.0.1.39
+=============================
+CREAR OBJETOS BD
+
+scp -i .\aws-us-east-1-trabajo-final.pem .\ScriptsBD\DDL.sql ec2-user@3.235.0.130:/tmp
+scp -i .\aws-us-east-1-trabajo-final.pem .\ScriptsBD\DML.sql ec2-user@3.235.0.130:/tmp
+
+MYSQL:
+- sudo yum update
+- sudo yum install mysql
+- mysql -h rmwl29wmfqmdd3.c99xllpyleig.us-east-1.rds.amazonaws.com -u root -p
+- source /tmp/DLL.sql;
+- source /tmp/DML.sql;

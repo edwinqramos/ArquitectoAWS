@@ -1,0 +1,72 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ApiGateway para el Balanceador App",
+    "Metadata": {},
+    "Parameters": {
+        "bucketApiGateway": {
+            "Type": "String",
+            "Description": "Bucket S3 donde se aloja el archivo body del apigateway",
+            "Default": "api-gateway-trabajo-final"
+        }
+    },
+    "Mappings": {},
+    "Conditions": {},
+    "Resources": {
+        "encuestaServicioApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+                "Name": "EncuestaServicios Api",
+                "Description": "Servicios Rest de Api Encuestas - Trabajo Final - MitoCode",
+                "FailOnWarnings": true,
+                "BodyS3Location": {
+                    "Bucket": {
+                        "Ref": "bucketApiGateway"
+                    },
+                    "Key": "apiGatewayEncuestaWithAWS.json"
+                }
+            }
+        },
+        "deploymentencuestaServicioApi": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "Properties": {
+                "RestApiId": {
+                    "Ref": "encuestaServicioApi"
+                },
+                "Description": "My deployment"
+            }
+        },
+        "prodStage": {
+            "Type": "AWS::ApiGateway::Stage",
+            "Properties": {
+                "StageName": "prod",
+                "Description": "Prod Stage",
+                "RestApiId": {
+                    "Ref": "encuestaServicioApi"
+                },
+                "DeploymentId": {
+                    "Ref": "deploymentencuestaServicioApi"
+                },
+                "Variables": {
+                    "Stack": "prod"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "encuestaServicioApiURL": {
+            "Description": "DNS API GeoServicios",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "https://",
+                        {"Ref":"encuestaServicioApi"},
+                        ".execute-api.",
+                        {"Ref":"AWS::Region"},
+                        ".amazonaws.com"
+                    ]
+                ]
+            }
+        }
+    }
+}

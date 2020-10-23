@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: VPC Trabajo Final
+
+Parameters:
+  blockCidrVPC:
+    Description: Bloque/Rangos de ips para la VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  blockCidrPublic1:
+    Type: String
+    Default: 10.0.1.0/24
+
+  blockCidrPublic2:
+    Type: String
+    Default: 10.0.2.0/24
+
+  blockCidrPrivate1:
+    Type: String
+    Default: 10.0.100.0/24
+
+  blockCidrPrivate2:
+    Type: String
+    Default: 10.0.200.0/24
+
+  publicAZ1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-1a
+
+  publicAZ2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-1b
+
+  privateAZ1:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-1a
+
+  privateAZ2:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-east-1b
+
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 
+        Ref: blockCidrVPC
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+      - Key: Name
+        Value: vpc-trabajo-final
+
+  myInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: igw-trabajo-final
+
+  attachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: myVPC
+      InternetGatewayId:
+        Ref: myInternetGateway
+
+  mySubnetPublic1: #red publica con routetable de salida a igw
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock: 
+        Ref: blockCidrPublic1
+      AvailabilityZone:
+        Ref: publicAZ1
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: pub1-trabajo-final
+
+  mySubnetPublic2: #red publica con routetable de salida a igw
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock:
+        Ref: blockCidrPublic2
+      AvailabilityZone: 
+        Ref: publicAZ2
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: pub2-trabajo-final
+
+  mySubnetPrivate1: #red publica con routetable de salida a igw
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock:
+        Ref: blockCidrPrivate1
+      AvailabilityZone: 
+        Ref: privateAZ1
+      Tags:
+      - Key: Name
+        Value: priv1-trabajo-final
+
+  mySubnetPrivate2: #red publica con routetable de salida a igw
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: myVPC
+      CidrBlock:
+        Ref: blockCidrPrivate2
+      AvailabilityZone: 
+        Ref: privateAZ2
+      Tags:
+      - Key: Name
+        Value: priv2-trabajo-final
+
+  myRouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: myVPC
+      Tags:
+      - Key: Name
+        Value: rtb-public-trabajo-final
+
+  myRouteToInternet:
+    Type: AWS::EC2::Route
+    DependsOn: myInternetGateway
+    Properties:
+       RouteTableId:
+         Ref: myRouteTablePublic
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId:
+         Ref: myInternetGateway
+
+  mySubnetPublic1RtbAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: mySubnetPublic1
+      RouteTableId:
+        Ref: myRouteTablePublic
+
+  mySubnetPublic2RouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: mySubnetPublic2
+      RouteTableId:
+        Ref: myRouteTablePublic
+
+Outputs:
+  vpcID:
+    Description: id de la vpc
+    Value: !Ref myVPC
+    Export:
+      Name: vpc-id
+
+  vpccidr:
+    Description: bloque ip de la vpc
+    Value: !GetAtt myVPC.CidrBlock
+    Export:
+      Name: vpc-cidrblock
+
+  subnetPublic1:
+    Description: subnet
+    Value: !Ref mySubnetPublic1
+    Export:
+      Name: vpc-subnetpublic-1
+
+  subnetPublic2:
+    Description: subnet
+    Value: !Ref mySubnetPublic2
+    Export:
+      Name: vpc-subnetpublic-2
+
+  subnetPrivate1:
+    Description: subnet
+    Value: !Ref mySubnetPrivate1
+    Export:
+      Name: vpc-subnetprivate-1
+
+  subnetPrivate2:
+    Description: subnet
+    Value: !Ref mySubnetPrivate2
+    Export:
+      Name: vpc-subnetprivate-2

@@ -1,0 +1,266 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Launch Configuration App",
+    "Metadata": {},
+    "Parameters": {
+        "KeyPairName": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Archivo para conexion a EC2",
+            "ConstraintDescription": "Debe existir previamente un archivo keypair"
+        },
+        "userMasterBD": {
+            "Type": "String",
+            "Description": "Usuario ROOT BD",
+            "NoEcho": true,
+            "Default": "root"
+        },
+        "passwordMasterBD": {
+            "Type": "String",
+            "Description": "Password ROOT BD",
+            "NoEcho": true,
+            "Default": "12345678"
+        },
+        "tipoDeInstancia" : {
+            "Description": "Amazon EC2 instance type for the instances",
+            "Type" : "String",
+            "Default" : "t2.micro"
+        },
+        "capacidadDeseadaAplicacion": {
+            "Type": "String",
+            "Default": "2"
+        }
+    },
+    "Mappings": {
+        "AWSRegionToAMI": {
+            "us-east-1": {
+                "AMIID": "ami-0080e4c5bc078760e",
+                "AzUnique": "us-east-1a"
+            },
+            "us-east-2": {
+                "AMIID": "ami-0080e4c5bc078760e",
+                "AzUnique": "us-east-1a"
+            }
+        }
+    },
+    "Conditions": {},
+    "Resources": {
+        "policyAplicacion": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "_policyAplicacion",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "cognito-idp:AdminInitiateAuth",
+                                "cognito-idp:ConfirmForgotPassword",
+                                "cognito-idp:GlobalSignOut",
+                                "cognito-idp:AdminRespondToAuthChallenge",
+                                "cognito-idp:InitiateAuth",
+                                "cognito-idp:AdminGetUser",
+                                "ses:SendEmail",
+                                "ses:SendRawEmail",
+                                "sns:Publish",
+                                "sqs:DeleteMessage",
+                                "sqs:GetQueueUrl",
+                                "sqs:ChangeMessageVisibility",
+                                "sqs:ReceiveMessage",
+                                "sqs:SendMessage",
+                                "sqs:DeleteMessageBatch",
+                                "sqs:ChangeMessageVisibilityBatch"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Roles": [
+                    {
+                        "Ref": "roleAplicacion"
+                    }
+                ]
+            }
+        },
+        "roleAplicacion": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "_roleAplicacion",
+                "Description": "Rol Cognito,SES,SNS,SQS para la aplicación",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/"
+            }
+        },
+        "instanceProfileAplicacion": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "roleAplicacion"
+                    }
+                ]
+            }
+        },
+        "launchConfiguration": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "KeyName": {
+                    "Ref": "KeyPairName"
+                },
+                "IamInstanceProfile": { "Ref": "instanceProfileAplicacion" },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "AWSRegionToAMI",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "AMIID"
+                    ]
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe \n",
+                                "yum update -y \n",
+                                "yum install java-1.8.0 -y \n",
+                                "yum remove java-1.7.0-openjdk -y \n",
+                                "echo 'export host=",{ "Fn::ImportValue": "basedatos-endpointRDS" },"' >> ~/.bash_profile \n",
+                                "echo 'export port=3306' >> ~/.bash_profile \n",
+                                "echo 'export database=\"encuestabd\"' >> ~/.bash_profile \n",
+                                "echo 'export username=",{"Ref": "userMasterBD"},"' >> ~/.bash_profile \n",
+                                "echo 'export password=",{"Ref": "passwordMasterBD"},"' >> ~/.bash_profile \n",
+                                "echo 'export awsCognitoPoolId=",{ "Fn::ImportValue": "cognito-pool-id" },"' >> ~/.bash_profile \n",
+                                "echo 'export awsCognitoClientId=",{ "Fn::ImportValue": "cognito-client-id" },"' >> ~/.bash_profile \n",
+                                "echo 'export awsCognitoRegion=",{ "Ref": "AWS::Region" },"' >> ~/.bash_profile \n",
+
+                                "source ~/.bash_profile \n",
+                                "wget https://github.com/edwinqramos/CustomerSatisfactionAppCallenge/raw/master/service-encuesta-0.0.1-SNAPSHOT.jar \n",
+                                "nohup java -Djava.security.egd=file:/dev/./urandom -jar service-encuesta-0.0.1-SNAPSHOT.jar | tee output.log & "
+                            ]
+                        ]
+                    }
+                },
+                "SecurityGroups": [
+                    { "Fn::ImportValue": "firewall-launch-configuration" }
+                ],
+                "InstanceType": { "Ref": "tipoDeInstancia" }
+            }
+        },
+        "aplicacionTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckPath": "/status/verificar",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Matcher": {
+                    "HttpCode": "200-204"
+                },
+                "Name": "TargetGroup-Trabajo-Final",
+                "Port": 8080,
+                "Protocol": "HTTP",
+                "TargetGroupAttributes": [
+                    {
+                        "Key": "deregistration_delay.timeout_seconds",
+                        "Value": "30"
+                    }
+                ],
+                "Targets": [],
+                "VpcId": {
+                    "Fn::ImportValue": "vpc-id"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "apiEncuesta"
+                    }
+                ]
+            }
+        },
+        "autoScalingAplicacion": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "VPCZoneIdentifier": [
+                    {
+                       "Fn::ImportValue" : "vpc-subnetpublic-1"
+                    },
+                    {
+                        "Fn::ImportValue" : "vpc-subnetpublic-2"
+                    }
+                ],
+                "LaunchConfigurationName": {
+                    "Ref": "launchConfiguration"
+                },
+                "MinSize": "0",
+                "DesiredCapacity": { "Ref" : "capacidadDeseadaAplicacion" },
+                "MaxSize": "4",
+                "TargetGroupARNs": [
+                    {
+                        "Ref": "aplicacionTargetGroup"
+                    }
+                ],
+                "MetricsCollection": [
+                    {
+                        "Granularity": "1Minute",
+                        "Metrics": [
+                            "GroupMinSize",
+                            "GroupMaxSize"
+                        ]
+                    }
+                ]
+            }
+        },
+        "aplicacionAlbListenerRule": {
+            "Type": "AWS::ElasticLoadBalancingV2::ListenerRule",
+            "Properties": {
+                "Actions": [
+                    {
+                        "Type": "forward",
+                        "TargetGroupArn": {
+                            "Ref": "aplicacionTargetGroup"
+                        }
+                    }
+                ],
+                "Conditions": [
+                    {
+                        "Field": "path-pattern",
+                        "Values": [
+                            "/api/*",
+                            "/v2/*"
+                        ]
+                    }
+                ],
+                "ListenerArn": { "Fn::ImportValue": "balanceador-arn-http-80" },
+                "Priority": 10
+            }
+        }
+    },
+    "Outputs": {
+        "aplicacionTargetGroup": {
+            "Description": "grupo de destino - aplicación",
+            "Value": {
+                "Ref": "aplicacionTargetGroup"
+            }
+        }
+    }
+}

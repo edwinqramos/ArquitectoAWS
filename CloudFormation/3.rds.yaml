@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Base datos Mysql RDS"
+
+Parameters:
+  Passwd:
+    Description: Contraseña de la base datos
+    Type: 'String'
+    NoEcho: true
+  
+  TipoInstancia:
+    Description: Tipo de EC2
+    Type: String
+    Default: db.t2.micro
+
+Resources:
+
+  myBD: 
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 20
+      BackupRetentionPeriod: 0
+      CopyTagsToSnapshot: false
+      DBInstanceClass: !Ref TipoInstancia
+      DBName: encuestabd
+      DBSubnetGroupName: !Ref mySubnetConf
+      DeletionProtection: false
+      Engine: MySQL
+      EngineVersion: "5.7.21"
+      MasterUsername: "root"
+      MasterUserPassword: !Ref Passwd
+      MultiAZ: false
+      Port: "3306"
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !ImportValue firewall-mysql
+
+  mySubnetConf:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: 'Redes Privadas'
+      DBSubnetGroupName: 'dbprivate'
+      SubnetIds:
+        - !ImportValue vpc-subnetprivate-1
+        - !ImportValue vpc-subnetprivate-2
+
+Outputs:
+  myBDEndpoint:
+    Description: Endpoint BD Mysql
+    Value: 
+      !GetAtt myBD.Endpoint.Address
+    Export:
+      Name: basedatos-endpointRDS

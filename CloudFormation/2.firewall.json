@@ -1,0 +1,230 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Firewall Security Groups",
+    "Metadata": {},
+    "Parameters": {
+    },
+    "Mappings": {},
+    "Conditions": {},
+    "Resources": {
+        "sgMysqlRDS": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Seguridad Mysql RDS",
+                "VpcId": {
+                    "Fn::ImportValue" : "vpc-id"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "3306",
+                        "ToPort": "3306",
+                        "SourceSecurityGroupId": {
+                            "Ref" : "sgBastion"
+                        }
+                    },
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "3306",
+                        "ToPort": "3306",
+                        "SourceSecurityGroupId": {
+                            "Ref" : "sgLaunchConfiguration"
+                        }
+                    },
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "3306",
+                        "ToPort": "3306",
+                        "SourceSecurityGroupId": {
+                            "Ref" : "sgApiECS"
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sgMysqlRDS"
+                    }
+                ]
+            }
+        },
+        "sgBastion": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Acceso al bastion para redes privadas",
+                "VpcId": {
+                    "Fn::ImportValue" : "vpc-id"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "190.232.205.39/32"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sgBastion"
+                    }
+                ]
+            }
+        },
+        "sgLaunchConfiguration": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Permite trafico del balanceador (desde otra regla) y salida a internet",
+                "VpcId": {
+                    "Fn::ImportValue" : "vpc-id"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "190.232.205.39/32"
+                    },
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
+                        "SourceSecurityGroupId" : {
+                            "Ref": "sgBalanceador"
+                        }
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sgLaunchConfiguration"
+                    }
+                ]
+            }
+        },
+        "sgBalanceador": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Expone puerto 80 balanceador",
+                "VpcId": {
+                    "Fn::ImportValue" : "vpc-id"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sgBalanceador"
+                    }
+                ]
+            }
+        },
+        "sgApiECS": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Permite trafico del balanceador hacia target groups ecs (viceversa)",
+                "VpcId": {
+                    "Fn::ImportValue" : "vpc-id"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "TCP",
+                        "FromPort": "32768",
+                        "ToPort": "65535",
+                        "SourceSecurityGroupId": {
+                            "Ref" : "sgBalanceador"
+                        }
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "sgApiECS"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "sgMysqlRDS": {
+            "Description": "Security Group de la base de datos Mysql RDS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "sgMysqlRDS",
+                    "GroupId"
+                ]
+            },
+            "Export" : { "Name" : "firewall-mysql" }
+        },
+        "sgBastion": {
+            "Description": "Security Group del bastion",
+            "Value": {
+                "Fn::GetAtt": [
+                    "sgBastion",
+                    "GroupId"
+                ]
+            },
+            "Export" : { "Name" : "firewall-bastion" }
+        },
+        "sgLaunchConfiguration": {
+            "Description": "Security Group del Launch Configuration",
+            "Value": {
+                "Fn::GetAtt": [
+                    "sgLaunchConfiguration",
+                    "GroupId"
+                ]
+            },
+            "Export" : { "Name" : "firewall-launch-configuration" }
+        },
+        "sgBalanceador": {
+            "Description": "Security Group de EC2 sgBalanceador",
+            "Value": {
+                "Fn::GetAtt": [
+                    "sgBalanceador",
+                    "GroupId"
+                ]
+            },
+            "Export" : { "Name" : "firewall-balanceador" }
+        },
+        "sgApiECS": {
+            "Description": "Security Group de ec2 sgApiECS",
+            "Value": {
+                "Fn::GetAtt": [
+                    "sgApiECS",
+                    "GroupId"
+                ]
+            },
+            "Export" : { "Name" : "firewall-ecs" }
+        }
+    }
+}

@@ -1,0 +1,177 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Configuracion Pool de usuarios",
+  "Metadata": {},
+  "Parameters": {
+    "emailUserAdmin": {
+      "Type": "String",
+      "Description": "email del usuario admin por defecto"
+    },
+    "emailUserAlumno": {
+      "Type": "String",
+      "Description": "email del usuario alumno por defecto"
+    }
+  },
+  "Mappings": {},
+  "Conditions": {},
+  "Resources": {
+    "userPoolTrabajoFinal": {
+      "Type": "AWS::Cognito::UserPool",
+      "Properties": {
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+          "InviteMessageTemplate": {
+            "EmailMessage": "Se ha creado su usuario {username} y su contraseña temporal es {####}",
+            "EmailSubject": "Alta Cuenta AWS"
+          },
+          "UnusedAccountValidityDays": 7
+        },
+        "AutoVerifiedAttributes": [
+          "email"
+        ],
+        "EmailVerificationMessage": "Su código de verificación es {####}.",
+        "EmailVerificationSubject": "Su código de verificación",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 6,
+            "RequireLowercase": false,
+            "RequireNumbers": false,
+            "RequireSymbols": false,
+            "RequireUppercase": false
+          }
+        },
+        "UserPoolName": "userPoolTrabajoFinal"
+      }
+    },
+    "clientId": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "ClientName": "angular",
+        "ExplicitAuthFlows": [
+          "ADMIN_NO_SRP_AUTH"
+        ],
+        "GenerateSecret": false,
+        "ReadAttributes": [
+          "email"
+        ],
+        "RefreshTokenValidity": 2,
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        },
+        "WriteAttributes": [
+          "email"
+        ]
+      }
+    },
+    "userAdmin": {
+      "Type": "AWS::Cognito::UserPoolUser",
+      "Properties": {
+        "DesiredDeliveryMediums": [
+          "EMAIL"
+        ],
+        "Username": "admin",
+        "UserAttributes": [
+          {
+            "Name": "email",
+            "Value": {
+              "Ref": "emailUserAdmin"
+            }
+          }
+        ],
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    },
+    "adminGroup": {
+      "Type": "AWS::Cognito::UserPoolGroup",
+      "Properties": {
+        "Description": "Grupo de usuarios administrador",
+        "GroupName": "ADMIN",
+        "Precedence": 5,
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    },
+    "userAlumno": {
+      "Type": "AWS::Cognito::UserPoolUser",
+      "Properties": {
+        "DesiredDeliveryMediums": [
+          "EMAIL"
+        ],
+        "Username": "alumno",
+        "UserAttributes": [
+          {
+            "Name": "email",
+            "Value": {
+              "Ref": "emailUserAlumno"
+            }
+          }
+        ],
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    },
+    "alumnoGroup": {
+      "Type": "AWS::Cognito::UserPoolGroup",
+      "Properties": {
+        "Description": "Grupo de usuarios de alumnos",
+        "GroupName": "ALUMNO",
+        "Precedence": 5,
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    },
+    "adminUserToAdminGroup": {
+      "Type": "AWS::Cognito::UserPoolUserToGroupAttachment",
+      "DependsOn": [
+        "userAdmin",
+        "adminGroup"
+      ],
+      "Properties": {
+        "GroupName": "ADMIN",
+        "Username": "admin",
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    },
+    "alumnoUserToAlumnoGroup": {
+      "Type": "AWS::Cognito::UserPoolUserToGroupAttachment",
+      "DependsOn": [
+        "userAlumno",
+        "alumnoGroup"
+      ],
+      "Properties": {
+        "GroupName": "ALUMNO",
+        "Username": "alumno",
+        "UserPoolId": {
+          "Ref": "userPoolTrabajoFinal"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "cognitoIdUserPool": {
+      "Description": "ID del grupo Cognito",
+      "Value": {
+        "Ref": "userPoolTrabajoFinal"
+      },
+      "Export": {
+        "Name": "cognito-pool-id"
+      }
+    },
+    "clientId": {
+      "Description": "ID del cliente oauth front",
+      "Value": {
+        "Ref": "clientId"
+      },
+      "Export": {
+        "Name": "cognito-client-id"
+      }
+    }
+  }
+}
